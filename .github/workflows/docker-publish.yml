@@ -1,0 +1,44 @@
+name: Docker Publish
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  docker:
+    name: Docker Image to GHCR
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout with submodules
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set image namespace
+        shell: bash
+        run: echo "IMAGE_NAMESPACE=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_ENV"
+
+      # The Docker driver lets the second build resolve the local builder image.
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver: docker
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Blessing Skin
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          tags: ${{ env.IMAGE_NAMESPACE }}/zovo_card_cdk_auto:latest
+          push: true
